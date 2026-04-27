@@ -16,3 +16,5 @@ title为标题，flows为一个值类型为[String, String, String, int, int]的
 <img width="2560" height="1393" alt="image" src="https://github.com/user-attachments/assets/c4bfa187-99d9-43c5-b46b-6922ac65ff36" />
 
 <img width="1171" height="1392" alt="image" src="https://github.com/user-attachments/assets/9e5354fa-41bc-4313-93bd-b725c7f71544" />
+
+对于Lighthouse的无障碍测试中，对比度方面出现：`背景色和前景色没有足够高的对比度。`的问题，是因为文字动效采用opacity透明度做动效导致检测有误，实际为rgb(89,89,89)已经达到WACG AAA标准
