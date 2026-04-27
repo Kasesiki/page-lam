@@ -5,6 +5,8 @@
 
 title为标题，flows为一个值类型为[String, String, String, int, int]的数组，alpine为alpine3.x.x的js文件
 
+网页还调用了一个api和一个字体文件，字体文件可以自动回退，api只是通过offset来获取更旧时间的消息，在原版实现中，每次api返回的limit为20条，可以自行修改，和在预览连接中自行分析
+
 预览：https://www.lyxnxia.space/lam
 
 简单而不粗糙，实现了完美自适应加动态响应效果，在多端测试表现良好
