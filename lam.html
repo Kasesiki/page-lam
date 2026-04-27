@@ -135,7 +135,6 @@
                 Alpine.store('myStore', {
                     flows: <%- flows %>,
                     submit_text: async function(a) {
-                        console.log(a); 
                         if (a.key === 'Enter') {
                             if (a.target.value.trim() == "") {
                                 alert('发点什么吧。。。');
@@ -190,10 +189,8 @@
                             }, flows.length * 300); 
                             const start = offset;
                             Alpine.store('myStore').flows.slice(start, start + flows.length).forEach((_, i) => {
-                                console.log(i, offset, Alpine.store('myStore').flows);
                                 const index = start + i;
                                 setTimeout(() => {
-                                    console.log(Alpine.store('myStore').flows[index])
                                     Alpine.store('myStore').flows[index][5] = true;
                                     
                                 }, (i+1) * 300);
