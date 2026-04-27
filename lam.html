@@ -87,7 +87,7 @@
 
             .input-text:focus {
                 outline: unset;
-                border-bottom: 2px solid #000;
+                border-bottom: 1px solid #000;
             }
 
             .card {
@@ -180,9 +180,7 @@
                             const index = start + i;
                             setTimeout(() => {
                                 Alpine.store('myStore').flows[index][5] = true;
-                                
                             }, (i+1) * 300);
-                            
                         });
                         offset += flows.length;
                     }, 100);
@@ -201,7 +199,7 @@
     </head>
 
     <body x-data x-init="getflows()">
-        <div style="margin-left: 2rem; margin-top: 1.5rem;">发推: <input id="author" placeholder="你是?" style="width: 5rem;min-width: 0" class="input-text"><input id="posttext" placeholder="发什么....." @keyup="$store.myStore.submit_text(event)" class="input-text"><button @click="$store.myStore.click_text()">发推</button></div>
+        <div style="margin-left: 2rem; margin-top: 1.5rem;line-height: 1.25rem;">发推: <input id="author" placeholder="你是?" style="width: 5rem;min-width: 0" class="input-text"><input id="posttext" placeholder="发什么....." @keyup="$store.myStore.submit_text(event)" class="input-text"><button @click="$store.myStore.click_text()">发推</button></div>
         <div id="body" class="flowbox">
             <template x-for="flow in $store.myStore.flows" :key="flow[4]">
                 <div class="card flowblock" :class="flow[5] ? 'is-shown' : ''" style="margin-bottom: var(--bulma-block-spacing);">
