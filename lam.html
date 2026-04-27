@@ -97,110 +97,107 @@
             }
 
         </style>
-        <script>
-
-            function getCookie(cname)
+    <script>
+        function getCookie(cname)
+        {
+            var name = cname + "=";
+            var ca = document.cookie.split(';');
+            for(var i=0; i<ca.length; i++) 
             {
-                var name = cname + "=";
-                var ca = document.cookie.split(';');
-                for(var i=0; i<ca.length; i++) 
-                {
-                    var c = ca[i].trim();
-                    if (c.indexOf(name)==0) return c.substring(name.length,c.length);
-                }
-                return "";
+                var c = ca[i].trim();
+                if (c.indexOf(name)==0) return c.substring(name.length,c.length);
             }
+            return "";
+        }
 
-            function setCookie(cname,cvalue,exdays)
-            {
-                var d = new Date();
-                d.setTime(d.getTime()+(exdays*24*60*60*1000));
-                var expires = "expires="+d.toGMTString();
-                document.cookie = cname + "=" + cvalue + "; " + expires;
-            }
+        function setCookie(cname,cvalue,exdays)
+        {
+            var d = new Date();
+            d.setTime(d.getTime()+(exdays*24*60*60*1000));
+            var expires = "expires="+d.toGMTString();
+            document.cookie = cname + "=" + cvalue + "; " + expires;
+        }
 
-            async function getflows() {
-                Alpine.store('myStore', {
-                    flows: <%- flows %>,
-                    submit_text: async function(a) {
-                        if (a.key === 'Enter') {
-                            if (a.target.value.trim() == "") {
-                                alert('发点什么吧。。。');
-                                return;
-                            }
-                            author = document.getElementById('author').value || '匿名用户';
-                            let res = await fetch('/api/postflow?text=' + encodeURIComponent(a.target.value.trim()) + '&author=' + encodeURIComponent(author));
-                            if (res.status === 200) {
-                                setCookie("username", author, 365);
-                                alert('发推了。。。');
-                                
-                                location.reload(); 
-                            }
-                        }
-                    },
-                    loveFlow: async function(id) {
-                        let res = await fetch('/api/loveflow?id=' + encodeURIComponent(id));
-                        if (res.status === 200) {
-                            document.getElementById(id).textContent = parseInt(document.getElementById(id).textContent) + 1;
-                        }
-                    },
-                    click_text: async function() {
-                        let input = document.getElementById('posttext').value;
-                        if (input.trim() == "") {
+        async function getflows() {
+            Alpine.store('myStore', {
+                flows: <%- flows %>,
+                submit_text: async function(a) {
+                    if (a.key === 'Enter') {
+                        if (a.target.value.trim() == "") {
                             alert('发点什么吧。。。');
                             return;
                         }
-                        let author = document.getElementById('author').value || '匿名用户';
-                        let res = await fetch('/api/postflow?text=' + encodeURIComponent(input.trim()) + '&author=' + encodeURIComponent(author));
+                        author = document.getElementById('author').value || '匿名用户';
+                        let res = await fetch('/api/postflow?text=' + encodeURIComponent(a.target.value.trim()) + '&author=' + encodeURIComponent(author));
                         if (res.status === 200) {
                             setCookie("username", author, 365);
                             alert('发推了。。。');
-                            location.reload();
+                            
+                            location.reload(); 
                         }
                     }
-                });
-                let offset = 0;
-                
-                let mutex = false;
-                let body = document.documentElement;
-                window.addEventListener('scroll', async () => {
-                    if (body.scrollTop + body.clientHeight >= body.scrollHeight-100 && !mutex) {
-                        mutex = true;
-                        let flows = await (await fetch('/api/getflows?offset=' + offset)).json();
-                        flows = flows.map(f => [...f, false]);
-                        flows.forEach((_, i) => {
-                            Alpine.store('myStore').flows.push(flows[i]);
-                        });
-                        setTimeout(() => {
-                            setTimeout(() => {
-                                mutex = false;
-                            }, flows.length * 300); 
-                            const start = offset;
-                            Alpine.store('myStore').flows.slice(start, start + flows.length).forEach((_, i) => {
-                                const index = start + i;
-                                setTimeout(() => {
-                                    Alpine.store('myStore').flows[index][5] = true;
-                                    
-                                }, (i+1) * 300);
-                                
-                            });
-                           offset += flows.length;
-                        }, 100);
+                },
+                loveFlow: async function(id) {
+                    let res = await fetch('/api/loveflow?id=' + encodeURIComponent(id));
+                    if (res.status === 200) {
+                        document.getElementById(id).textContent = parseInt(document.getElementById(id).textContent) + 1;
                     }
-                });
-                
-                Alpine.store('myStore').flows = Alpine.store('myStore').flows.map(f => [...f, false]);
-                setTimeout(() => {
-                    document.getElementById('author').value = getCookie('username');
-                    Alpine.store('myStore').flows.forEach((_, i) => {
-                        offset += 1;
-                        setTimeout(() => {
-                            Alpine.store('myStore').flows[i][5] = true;
-                        }, (i+1) * 300);
+                },
+                click_text: async function() {
+                    let input = document.getElementById('posttext').value;
+                    if (input.trim() == "") {
+                        alert('发点什么吧。。。');
+                        return;
+                    }
+                    let author = document.getElementById('author').value || '匿名用户';
+                    let res = await fetch('/api/postflow?text=' + encodeURIComponent(input.trim()) + '&author=' + encodeURIComponent(author));
+                    if (res.status === 200) {
+                        setCookie("username", author, 365);
+                        alert('发推了。。。');
+                        location.reload();
+                    }
+                }
+            });
+
+            // 滑动到底部时追加留言
+            let offset = 0;
+            let mutex = false;
+            let body = document.documentElement;
+            window.addEventListener('scroll', async () => {
+                if (body.scrollTop + body.clientHeight >= body.scrollHeight-100 && !mutex) {
+                    mutex = true;
+                    let flows = await (await fetch('/api/getflows?offset=' + offset)).json();
+                    flows = flows.map(f => [...f, false]);
+                    flows.forEach((_, i) => {
+                        Alpine.store('myStore').flows.push(flows[i]);
                     });
-                }, 100);
-            }
-        </script>
+                    setTimeout(() => {
+                        setTimeout(() => {
+                            mutex = false;
+                        }, flows.length * 300); 
+                        const start = offset;
+                        Alpine.store('myStore').flows.slice(start, start + flows.length).forEach((_, i) => {
+                            const index = start + i;
+                            setTimeout(() => {
+                                Alpine.store('myStore').flows[index][5] = true;
+                                
+                            }, (i+1) * 300);
+                            
+                        });
+                        offset += flows.length;
+                    }, 100);
+                }
+            });
+            
+            Alpine.store('myStore').flows.forEach((item, i) => {
+                offset += 1;
+                item.push(false);
+                setTimeout(() => {
+                    item[5] = true;
+                }, (i+1) * 300);
+            })
+        }
+    </script>
     </head>
 
     <body x-data x-init="getflows()">
