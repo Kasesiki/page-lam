@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <title><%- title %></title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta content="Xiaxiaobai's personal website, A simple and secure anonymous message board that lets users send and receive anonymous messages. Perfect for honest feedback and fun interactions." name="description">
+        <link rel="icon" href="/static/favicon.ico">
+        <style>
+
+            html, body {
+                height: auto;
+                scrollbar-width: none;
+                margin: 0;
+                top: 0;
+                width: 100%;
+            }
+
+            body {
+                position: absolute;
+                color: rgb(89,89,89);
+            }
+
+            body::-webkit-scrollbar {
+                display: none;
+            }
+
+            .background {
+                width: 100%;
+                height: 100%;
+                min-height: 100dvh;
+                z-index: -1;
+                display: block;
+                top: 0;
+                margin: 0;
+                position: fixed;
+                filter: brightness(0.6);
+                object-fit: cover;
+            }
+
+            .flowbox {
+                
+                margin: 2rem;
+                margin-top: 2rem;
+                white-space: nowrap;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .card {
+                flex: auto;
+                max-width: 100%; /* 防止溢出 */
+            }
+
+            html {
+                margin: 0;
+                font-family: 'MapleMono', monospace;
+            }
+
+            .flowblock {
+                opacity: 0;
+                transition: width 400ms ease-out, opacity 400ms ease-out;
+            }
+
+            .flowblock.is-shown {
+                opacity: 1;
+                animation: flowblockanim 450ms ease-out both;
+            }
+
+            @keyframes flowblockanim {
+                from {
+                    opacity: 0;
+                    transform: translateY(500px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            .card-header {
+                display: flex;
+                box-shadow: 0 0.125em 0.25em hsla(221, 14%, 4%,0.1);
+            }
+
+            .input-text {
+                border: unset;
+                border-bottom: 1px solid #000;
+                width: 20rem;
+                max-width: 60%;
+                margin-right: 2rem;
+            }
+
+            .input-text:focus {
+                outline: unset;
+                border-bottom: 2px solid #000;
+            }
+
+            .card {
+                background-color: rgba(255, 255, 255, 0.8);
+                padding: 1rem;
+                box-shadow: 0 0.5em 1em -0.125em hsla(221deg, 14%, 4%,0.1),0 0px 0 1px hsla(221deg, 14%, 4%,0.02);
+            }
+            @font-face {
+                font-family: "MapleMono";
+                font-display: swap;
+                src: url("/static/MapleMono-Light.woff2");
+            }
+        </style>
+        <script>
+
+            function getCookie(cname)
+            {
+                var name = cname + "=";
+                var ca = document.cookie.split(';');
+                for(var i=0; i<ca.length; i++) 
+                {
+                    var c = ca[i].trim();
+                    if (c.indexOf(name)==0) return c.substring(name.length,c.length);
+                }
+                return "";
+            }
+
+            function setCookie(cname,cvalue,exdays)
+            {
+                var d = new Date();
+                d.setTime(d.getTime()+(exdays*24*60*60*1000));
+                var expires = "expires="+d.toGMTString();
+                document.cookie = cname + "=" + cvalue + "; " + expires;
+            }
+
+            async function getflows() {
+                Alpine.store('myStore', {
+                    flows: <%- flows %>,
+                    submit_text: async function(a) {
+                        console.log(a); 
+                        if (a.key === 'Enter') {
+                            if (a.target.value.trim() == "") {
+                                alert('发点什么吧。。。');
+                                return;
+                            }
+                            author = document.getElementById('author').value || '匿名用户';
+                            let res = await fetch('/api/postflow?text=' + encodeURIComponent(a.target.value.trim()) + '&author=' + encodeURIComponent(author));
+                            if (res.status === 200) {
+                                setCookie("username", author, 365);
+                                alert('发推了。。。');
+                                
+                                location.reload(); 
+                            }
+                        }
+                    },
+                    loveFlow: async function(id) {
+                        let res = await fetch('/api/loveflow?id=' + encodeURIComponent(id));
+                        if (res.status === 200) {
+                            document.getElementById(id).textContent = parseInt(document.getElementById(id).textContent) + 1;
+                        }
+                    },
+                    click_text: async function() {
+                        let input = document.getElementById('posttext').value;
+                        if (input.trim() == "") {
+                            alert('发点什么吧。。。');
+                            return;
+                        }
+                        let author = document.getElementById('author').value || '匿名用户';
+                        let res = await fetch('/api/postflow?text=' + encodeURIComponent(input.trim()) + '&author=' + encodeURIComponent(author));
+                        if (res.status === 200) {
+                            setCookie("username", author, 365);
+                            alert('发推了。。。');
+                            location.reload();
+                        }
+                    }
+                });
+                let offset = 0;
+                
+                let mutex = false;
+                let body = document.documentElement;
+                window.addEventListener('scroll', async () => {
+                    if (body.scrollTop + body.clientHeight >= body.scrollHeight-100 && !mutex) {
+                        mutex = true;
+                        let flows = await (await fetch('/api/getflows?offset=' + offset)).json();
+                        flows = flows.map(f => [...f, false]);
+                        flows.forEach((_, i) => {
+                            Alpine.store('myStore').flows.push(flows[i]);
+                        });
+                        setTimeout(() => {
+                            setTimeout(() => {
+                                mutex = false;
+                            }, flows.length * 300); 
+                            const start = offset;
+                            Alpine.store('myStore').flows.slice(start, start + flows.length).forEach((_, i) => {
+                                console.log(i, offset, Alpine.store('myStore').flows);
+                                const index = start + i;
+                                setTimeout(() => {
+                                    console.log(Alpine.store('myStore').flows[index])
+                                    Alpine.store('myStore').flows[index][5] = true;
+                                    
+                                }, (i+1) * 300);
+                                
+                            });
+                           offset += flows.length;
+                        }, 100);
+                    }
+                });
+                
+                // let flows = await (await fetch('/api/getflows')).json();
+                Alpine.store('myStore').flows = Alpine.store('myStore').flows.map(f => [...f, false]);
+                setTimeout(() => {
+                    document.getElementById('author').value = getCookie('username');
+                    Alpine.store('myStore').flows.forEach((_, i) => {
+                        offset += 1;
+                        setTimeout(() => {
+                            Alpine.store('myStore').flows[i][5] = true;
+                        }, (i+1) * 300);
+                    });
+                }, 100);
+            }
+        </script>
+    </head>
+
+    <body x-data x-init="getflows()">
+        <!-- <img src="/api/wallpaper?format=jpeg" class="background"> -->
+        <div style="margin-left: 2rem; margin-top: 1.5rem;">发推: <input id="author" placeholder="你是?" style="width: 5rem;min-width: 0" class="input-text"><input id="posttext" placeholder="发什么....." @keyup="$store.myStore.submit_text(event)" class="input-text"><button @click="$store.myStore.click_text()">发推</button></div>
+        <div id="body" class="flowbox">
+            <template x-for="flow in $store.myStore.flows" :key="flow[4]">
+                <div class="card flowblock" :class="flow[5] ? 'is-shown' : ''" style="margin-bottom: var(--bulma-block-spacing);">
+                    <header class="card-header">
+                        <p class="card-header-title" style="width: 100%;margin-left: 1rem" x-text="flow[1]"></p>
+                        <div class="card-header-title" style="float: right; flex-grow: 1;margin: 0.7rem">#<span x-text="flow[4]"></span></div>
+                    </header>
+                    <div class="card-content" style="white-space: pre-line;">
+                        <div style="opacity: 0.8;"><span x-text="flow[2]"></span>:</div>
+                        <div style="text-indent: 1.4rem" x-text="flow[0]"></div>
+                    </div>
+                    <footer class="card-footer">
+                        <div style="float: right"><span :id="flow[4]" style="margin-right: 1rem;" x-text="flow[3]"></span><button @click="$store.myStore.loveFlow(flow[4])" class="button ml-3">Love</button></div>
+                    </footer>
+                </div>
+            </template>
+        </div>
+    <script><%- alpine %></script>
+    </body>
+</html>
