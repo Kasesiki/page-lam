@@ -6,13 +6,13 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta content="Xiaxiaobai's personal website, A simple and secure anonymous message board that lets users send and receive anonymous messages. Perfect for honest feedback and fun interactions." name="description">
-        <link rel="icon" href="/static/favicon.ico">
-        <link rel="preload" href="/static/MapleMono-Light.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="icon" href="/assets/favicon.ico">
+        <link rel="preload" href="/assets/MapleMono-Light.woff2" as="font" type="font/woff2" crossorigin>
         <style>
             @font-face {
                 font-family: "MapleMono";
                 font-display: swap;
-                src: url("/static/MapleMono-Light.woff2");
+                src: url("/assets/MapleMono-Light.woff2");
             }
             html, body {
                 height: auto;
@@ -84,7 +84,7 @@
                 max-width: 60%;
                 margin-right: 2rem;
             }
-
+            
             .input-text:focus {
                 outline: unset;
                 border-bottom: 1px solid #000;
@@ -98,18 +98,6 @@
 
         </style>
     <script>
-        function getCookie(cname)
-        {
-            var name = cname + "=";
-            var ca = document.cookie.split(';');
-            for(var i=0; i<ca.length; i++) 
-            {
-                var c = ca[i].trim();
-                if (c.indexOf(name)==0) return c.substring(name.length,c.length);
-            }
-            return "";
-        }
-
         function setCookie(cname,cvalue,exdays)
         {
             var d = new Date();
@@ -158,9 +146,18 @@
                     }
                 }
             });
+            
+            let offset = 0;
+            Alpine.store('myStore').flows.forEach((item, i) => {
+                offset += 1;
+                item.push(false);
+                setTimeout(() => {
+                    item[5] = true;
+                }, (i+1) * 300);
+            })
 
             // 滑动到底部时追加留言
-            let offset = 0;
+            
             let mutex = false;
             let body = document.documentElement;
             window.addEventListener('scroll', async () => {
@@ -186,14 +183,16 @@
                     }, 100);
                 }
             });
-            
-            Alpine.store('myStore').flows.forEach((item, i) => {
-                offset += 1;
-                item.push(false);
-                setTimeout(() => {
-                    item[5] = true;
-                }, (i+1) * 300);
-            })
+
+            var ca = document.cookie.split(';');
+            for(var i=0; i<ca.length; i++) 
+            {
+                var c = ca[i].trim();
+                if (c.indexOf("username=")==0) {
+                    document.getElementById("author").value = c.substring(9, c.length)
+                    break
+                };
+            }
         }
     </script>
     </head>
