@@ -3,9 +3,10 @@
     <head>
         <meta charset="utf-8">
         <title><%- title %></title>
-        <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta content="Xiaxiaobai's personal website, A simple and secure anonymous message board that lets users send and receive anonymous messages. Perfect for honest feedback and fun interactions." name="description">
+        <meta
+            content="Xiaxiaobai's personal website, A simple and secure anonymous message board that lets users send and receive anonymous messages. Perfect for honest feedback and fun interactions."
+            name="description">
         <link rel="icon" href="/assets/favicon.ico">
         <link rel="preload" href="/assets/MapleMono-Light.woff2" as="font" type="font/woff2" crossorigin>
         <style>
@@ -91,131 +92,132 @@
             }
 
             .card {
+                content-visibility: auto;
                 background-color: rgba(255, 255, 255, 0.8);
                 padding: 1rem;
                 box-shadow: 0 0.5em 1em -0.125em hsla(221deg, 14%, 4%,0.1),0 0px 0 1px hsla(221deg, 14%, 4%,0.02);
             }
 
         </style>
-    <script>
-        function setCookie(cname,cvalue,exdays)
-        {
-            var d = new Date();
-            d.setTime(d.getTime()+(exdays*24*60*60*1000));
-            var expires = "expires="+d.toGMTString();
-            document.cookie = cname + "=" + cvalue + "; " + expires;
-        }
-
-        async function getflows() {
-            Alpine.store('myStore', {
-                flows: <%- flows %>,
-                submit_text: async function(a) {
-                    if (a.key === 'Enter') {
-                        if (a.target.value.trim() == "") {
+        
+        <script>
+            var offset = 0;
+            let body = document.documentElement;
+            function setCookie(cname,cvalue,exdays)
+            {
+                var d = new Date();
+                d.setTime(d.getTime()+(exdays*24*60*60*1000));
+                var expires = "expires="+d.toGMTString();
+                document.cookie = cname + "=" + cvalue + "; " + expires;
+            }
+            document.addEventListener('alpine:init', () => {
+                Alpine.store('myStore', {
+                    flows: <%- flows %>,
+                    submit_text: async function(a) {
+                        if (a.key === 'Enter') {
+                            if (a.target.value.trim() == "") {
+                                alert('发点什么吧。。。');
+                                return;
+                            }
+                            author = document.getElementById('author').value || '匿名用户';
+                            let res = await fetch('/api/postflow?text=' + encodeURIComponent(a.target.value.trim()) + '&author=' + encodeURIComponent(author));
+                            if (res.status === 200) {
+                                setCookie("username", author, 365);
+                                alert('发推了。。。');
+                                location.reload(); 
+                            }
+                        }
+                    },
+                    click_text: async function() {
+                        let input = document.getElementById('posttext').value;
+                        if (input.trim() == "") {
                             alert('发点什么吧。。。');
                             return;
                         }
-                        author = document.getElementById('author').value || '匿名用户';
-                        let res = await fetch('/api/postflow?text=' + encodeURIComponent(a.target.value.trim()) + '&author=' + encodeURIComponent(author));
+                        let author = document.getElementById('author').value || '匿名用户';
+                        let res = await fetch('/api/postflow?text=' + encodeURIComponent(input.trim()) + '&author=' + encodeURIComponent(author));
                         if (res.status === 200) {
                             setCookie("username", author, 365);
                             alert('发推了。。。');
-                            
-                            location.reload(); 
+                            location.reload();
                         }
                     }
-                },
-                loveFlow: async function(id) {
-                    let res = await fetch('/api/loveflow?id=' + encodeURIComponent(id));
-                    if (res.status === 200) {
-                        document.getElementById(id).textContent = parseInt(document.getElementById(id).textContent) + 1;
+                });
+                document.getElementById('body').addEventListener('click', async (e) => {
+                    if (e.target.matches('.love-button')) {
+                        const id = e.target.dataset.flowId;
+                        let res = await fetch('/api/loveflow?id=' + encodeURIComponent(id));
+                        if (res.status === 200) {
+                            const a = document.getElementById(id);
+                            a.textContent = parseInt(a.textContent) + 1;
+                        }
                     }
-                },
-                click_text: async function() {
-                    let input = document.getElementById('posttext').value;
-                    if (input.trim() == "") {
-                        alert('发点什么吧。。。');
-                        return;
-                    }
-                    let author = document.getElementById('author').value || '匿名用户';
-                    let res = await fetch('/api/postflow?text=' + encodeURIComponent(input.trim()) + '&author=' + encodeURIComponent(author));
-                    if (res.status === 200) {
-                        setCookie("username", author, 365);
-                        alert('发推了。。。');
-                        location.reload();
-                    }
-                }
-            });
-            
-            let offset = 0;
-            Alpine.store('myStore').flows.forEach((item, i) => {
-                offset += 1;
-                item.push(false);
-                setTimeout(() => {
-                    item[5] = true;
-                }, (i+1) * 300);
-            })
-
-            // 滑动到底部时追加留言
-            
-            let mutex = false;
-            let body = document.documentElement;
-            window.addEventListener('scroll', async () => {
-                if (body.scrollTop + body.clientHeight >= body.scrollHeight-100 && !mutex) {
-                    mutex = true;
-                    let flows = await (await fetch('/api/getflows?offset=' + offset)).json();
-                    flows = flows.map(f => [...f, false]);
-                    flows.forEach((_, i) => {
-                        Alpine.store('myStore').flows.push(flows[i]);
-                    });
+                });
+                const store = Alpine.store('myStore');
+                store.flows.forEach((item, i) => {
+                    offset += 1;
+                    item.push(false);
                     setTimeout(() => {
-                        setTimeout(() => {
-                            mutex = false;
-                        }, flows.length * 300); 
-                        const start = offset;
-                        Alpine.store('myStore').flows.slice(start, start + flows.length).forEach((_, i) => {
-                            const index = start + i;
-                            setTimeout(() => {
-                                Alpine.store('myStore').flows[index][5] = true;
-                            }, (i+1) * 300);
-                        });
-                        offset += flows.length;
-                    }, 100);
-                }
-            });
+                        item[5] = true;
+                    }, (i+1) * 300);
+                })
 
-            var ca = document.cookie.split(';');
-            for(var i=0; i<ca.length; i++) 
-            {
-                var c = ca[i].trim();
-                if (c.indexOf("username=")==0) {
-                    document.getElementById("author").value = c.substring(9, c.length)
-                    break
-                };
-            }
-        }
-    </script>
+                var ca = document.cookie.split(';');
+                for(var i=0; i<ca.length; i++) 
+                {
+                    var c = ca[i].trim();
+                    if (c.indexOf("username=")==0) {
+                        document.getElementById("author").value = c.substring(9, c.length)
+                        break
+                    };
+                }
+
+                let nomore = false;
+                window.addEventListener('scroll', async () => {
+                    if (body.scrollTop + body.clientHeight >= body.scrollHeight-100 && !nomore) {
+                        let flows = await (await fetch('/api/getflows?offset=' + offset)).json();
+                        if (flows.length == 0) { nomore = true }
+                        flows = flows.map(f => [...f, false]);
+                        store.flows.push.apply(store.flows, flows);
+                        setTimeout(() => {
+                            const start = offset;
+                            store.flows.slice(start, start + flows.length).forEach((_, i) => {
+                                const index = start + i;
+                                setTimeout(() => {
+                                    store.flows[index][5] = true;
+                                }, (i+1) * 300);
+                            });
+                            offset += flows.length;
+                        }, 100);
+                    }
+                }, { passive: true });
+            });
+        </script>
     </head>
 
-    <body x-data x-init="getflows()">
-        <div style="margin-left: 2rem; margin-top: 1.5rem;line-height: 1.25rem;">发推: <input id="author" placeholder="你是?" style="width: 5rem;min-width: 0" class="input-text"><input id="posttext" placeholder="发什么....." @keyup="$store.myStore.submit_text(event)" class="input-text"><button @click="$store.myStore.click_text()">发推</button></div>
+    <body x-data>
+        <div style="margin-left: 2rem; margin-top: 1.5rem;line-height: 1.25rem;">
+            发推: <input id="author" placeholder="你是?" style="width: 5rem;min-width: 0" class="input-text">
+            <input id="posttext" placeholder="发什么....." @keyup="$store.myStore.submit_text(event)" class="input-text">
+            <button @click="$store.myStore.click_text()">发推</button>
+        </div>
         <div id="body" class="flowbox">
             <template x-for="flow in $store.myStore.flows" :key="flow[4]">
-                <div class="card flowblock" :class="flow[5] ? 'is-shown' : ''" style="margin-bottom: var(--bulma-block-spacing);">
+                <div class="card flowblock" :class="flow[5] ? 'is-shown' : ''">
                     <header class="card-header">
-                        <p class="card-header-title" style="width: 100%;margin-left: 1rem" x-text="flow[1]"></p>
-                        <div class="card-header-title" style="float: right; flex-grow: 1;margin: 0.7rem">#<span x-text="flow[4]"></span></div>
+                        <p style="width: 100%;margin-left: 1rem" x-text="flow[1]"></p>
+                        <div style="float: right; flex-grow: 1;margin: 0.7rem">#<span x-text="flow[4]"></span></div>
                     </header>
                     <div class="card-content" style="white-space: pre-line;">
-                        <div style="opacity: 0.8;"><span x-text="flow[2]"></span>:</div>
+                        <div style="opacity: 0.8;"><span x-text="flow[2]" tabindex="0"></span>:</div>
                         <div style="text-indent: 1.4rem" x-text="flow[0]"></div>
                     </div>
                     <footer class="card-footer">
-                        <div style="float: right"><span :id="flow[4]" style="margin-right: 1rem;" x-text="flow[3]"></span><button @click="$store.myStore.loveFlow(flow[4])" class="button ml-3">Love</button></div>
+                        <div style="float: right"><span :id="flow[4]" style="margin-right: 1rem;" x-text="flow[3]"></span><button aria-label="点赞" :data-flow-id="flow[4]" class="love-button">Love</button></div>
                     </footer>
                 </div>
             </template>
         </div>
-    <script><%- alpine %></script>
+        <script><%- alpine %></script>
     </body>
 </html>
