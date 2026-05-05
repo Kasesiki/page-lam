@@ -5,7 +5,7 @@
         <title><%- title %></title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta
-            content="Xiaxiaobai's personal website, A simple and secure anonymous message board that lets users send and receive anonymous messages. Perfect for honest feedback and fun interactions."
+            content="Xiaxiaobai's personal website, a simple and secure anonymous message board that lets users send and receive anonymous messages. Perfect for honest feedback and fun interactions."
             name="description">
         <link rel="icon" href="/assets/favicon.ico">
         <link rel="preload" href="/assets/MapleMono-Light.woff2" as="font" type="font/woff2" crossorigin>
@@ -42,24 +42,20 @@
                 gap: 12px;
             }
 
-            .card {
-                flex: auto;
-                max-width: 100%;
-            }
-
             html {
                 margin: 0;
                 font-family: 'MapleMono', monospace;
             }
 
             .flowblock {
+                flex: auto;
+                max-width: 100%;
                 opacity: 0;
-                transition: width 400ms ease-out, opacity 400ms ease-out;
-            }
-
-            .flowblock.is-shown {
-                opacity: 1;
                 animation: flowblockanim 450ms ease-out both;
+                content-visibility: auto;
+                background-color: rgba(255, 255, 255, 0.8);
+                padding: 1rem;
+                box-shadow: 0 0.5em 1em -0.125em hsla(221deg, 14%, 4%,0.1),0 0px 0 1px hsla(221deg, 14%, 4%,0.02);
             }
 
             @keyframes flowblockanim {
@@ -91,17 +87,9 @@
                 border-bottom: 1px solid #000;
             }
 
-            .card {
-                content-visibility: auto;
-                background-color: rgba(255, 255, 255, 0.8);
-                padding: 1rem;
-                box-shadow: 0 0.5em 1em -0.125em hsla(221deg, 14%, 4%,0.1),0 0px 0 1px hsla(221deg, 14%, 4%,0.02);
-            }
-
         </style>
         
         <script>
-            var offset = 0;
             let body = document.documentElement;
             function setCookie(cname,cvalue,exdays)
             {
@@ -154,41 +142,15 @@
                     }
                 });
                 const store = Alpine.store('myStore');
-                store.flows.forEach((item, i) => {
-                    offset += 1;
-                    item.push(false);
-                    setTimeout(() => {
-                        item[5] = true;
-                    }, (i+1) * 300);
-                })
-
-                var ca = document.cookie.split(';');
-                for(var i=0; i<ca.length; i++) 
-                {
-                    var c = ca[i].trim();
-                    if (c.indexOf("username=")==0) {
-                        document.getElementById("author").value = c.substring(9, c.length)
-                        break
-                    };
-                }
+                var offset = store.flows.length;
 
                 let nomore = false;
                 window.addEventListener('scroll', async () => {
                     if (body.scrollTop + body.clientHeight >= body.scrollHeight-100 && !nomore) {
                         let flows = await (await fetch('/api/getflows?offset=' + offset)).json();
-                        if (flows.length == 0) { nomore = true }
-                        flows = flows.map(f => [...f, false]);
+                        if (flows.length == 0) { nomore = true; return }
+                        offset += flows.length;
                         store.flows.push.apply(store.flows, flows);
-                        setTimeout(() => {
-                            const start = offset;
-                            store.flows.slice(start, start + flows.length).forEach((_, i) => {
-                                const index = start + i;
-                                setTimeout(() => {
-                                    store.flows[index][5] = true;
-                                }, (i+1) * 300);
-                            });
-                            offset += flows.length;
-                        }, 100);
                     }
                 }, { passive: true });
             });
@@ -202,22 +164,33 @@
             <button @click="$store.myStore.click_text()">发推</button>
         </div>
         <div id="body" class="flowbox">
-            <template x-for="flow in $store.myStore.flows" :key="flow[4]">
-                <div class="card flowblock" :class="flow[5] ? 'is-shown' : ''">
+            <template x-for="(flow, index) in $store.myStore.flows" :key="index">
+                <div class="flowblock" :style="`animation-delay: ${(index % 20) * 300}ms`">
                     <header class="card-header">
                         <p style="width: 100%;margin-left: 1rem" x-text="flow[1]"></p>
                         <div style="float: right; flex-grow: 1;margin: 0.7rem">#<span x-text="flow[4]"></span></div>
                     </header>
-                    <div class="card-content" style="white-space: pre-line;">
+                    <div style="white-space: pre-line;">
                         <div style="opacity: 0.8;"><span x-text="flow[2]" tabindex="0"></span>:</div>
                         <div style="text-indent: 1.4rem" x-text="flow[0]"></div>
                     </div>
-                    <footer class="card-footer">
+                    <footer>
                         <div style="float: right"><span :id="flow[4]" style="margin-right: 1rem;" x-text="flow[3]"></span><button aria-label="点赞" :data-flow-id="flow[4]" class="love-button">Love</button></div>
                     </footer>
                 </div>
             </template>
         </div>
         <script><%- alpine %></script>
+        <script>
+            let ca = document.cookie.split(';');
+            for(var i=0; i<ca.length; i++) 
+            {
+                var c = ca[i].trim();
+                if (c.indexOf("username=")==0) {
+                    document.getElementById("author").value = c.substring(9, c.length)
+                    break
+                };
+            }
+        </script>
     </body>
 </html>
