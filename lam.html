@@ -82,45 +82,38 @@
         </style>
         
         <script>
-            let body = document.documentElement;
             function setCookie(cname,cvalue,exdays)
             {
                 var d = new Date();
                 d.setTime(d.getTime()+(exdays*24*60*60*1000));
-                var expires = "expires="+d.toGMTString();
-                document.cookie = cname + "=" + cvalue + "; " + expires;
+                var expires = "expires="+d.toUTCString();
+                document.cookie = `${cname}=${encodeURIComponent(cvalue)}; Path=/;`
+            }
+            async function post(text)
+            {
+                if (text.trim() == "") {
+                    alert('发点什么吧。。。');
+                    return;
+                }
+                let author = document.getElementById('author').value || '匿名用户';
+                let res = await fetch('/api/postflow?text=' + encodeURIComponent(text.trim()) + '&author=' + encodeURIComponent(author));
+                if (res.status === 200) {
+                    setCookie("username", author, 365);
+                    alert('发推了。。。');
+                    location.reload(); 
+                }
             }
             document.addEventListener('alpine:init', () => {
-                Alpine.store('myStore', {
+                Alpine.store('store', {
                     flows: <%- flows %>,
                     submit_text: async function(a) {
                         if (a.key === 'Enter') {
-                            if (a.target.value.trim() == "") {
-                                alert('发点什么吧。。。');
-                                return;
-                            }
-                            author = document.getElementById('author').value || '匿名用户';
-                            let res = await fetch('/api/postflow?text=' + encodeURIComponent(a.target.value.trim()) + '&author=' + encodeURIComponent(author));
-                            if (res.status === 200) {
-                                setCookie("username", author, 365);
-                                alert('发推了。。。');
-                                location.reload(); 
-                            }
+                            post(a.target.value)
                         }
                     },
                     click_text: async function() {
                         let input = document.getElementById('posttext').value;
-                        if (input.trim() == "") {
-                            alert('发点什么吧。。。');
-                            return;
-                        }
-                        let author = document.getElementById('author').value || '匿名用户';
-                        let res = await fetch('/api/postflow?text=' + encodeURIComponent(input.trim()) + '&author=' + encodeURIComponent(author));
-                        if (res.status === 200) {
-                            setCookie("username", author, 365);
-                            alert('发推了。。。');
-                            location.reload();
-                        }
+                        post(input)
                     }
                 });
                 document.getElementById('main').addEventListener('click', async (e) => {
@@ -133,33 +126,19 @@
                         }
                     }
                 });
-                const store = Alpine.store('myStore');
-                var offset = store.flows.length;
-
-                let nomore = false;
-                let lock = false;
-                window.addEventListener('scroll', async () => {
-                    if (!lock && !nomore && body.scrollTop + body.clientHeight >= body.scrollHeight-100) {
-                        lock = true;
-                        let flows = await (await fetch('/api/getflows?offset=' + offset)).json();
-                        if (flows.length == 0) { nomore = true; return }
-                        offset += flows.length;
-                        store.flows.push.apply(store.flows, flows);
-                        lock = false;
-                    }
-                }, { passive: true });
             });
         </script>
     </head>
 
     <body x-data>
         <header role="banner" style="margin-left: 2rem; margin-top: 1.5rem;line-height: 1.25rem;">
-            发推: <input id="author" placeholder="你是?" style="width: 5rem;min-width: 0" class="input-text">
-            <input id="posttext" placeholder="发什么....." @keyup="$store.myStore.submit_text(event)" class="input-text">
-            <button @click="$store.myStore.click_text()">发推</button>
+            <label for="author">发推：</label>
+            <input id="author" placeholder="你是?" aria-label="昵称" style="width: 5rem;min-width: 0" class="input-text">
+            <input id="posttext" aria-label="内容" placeholder="发什么....." @keyup="$store.store.submit_text(event)" class="input-text">
+            <button @click="$store.store.click_text()">发推</button>
         </header>
         <main role="main" id="main" class="flowbox">
-            <template x-for="(flow, index) in $store.myStore.flows" :key="index">
+            <template x-for="(flow, index) in $store.store.flows" :key="index">
                 <article class="flowblock" :style="`animation-delay: ${(index % 20) * 300}ms`">
                     <header class="card-header">
                         <p style="width: 100%;margin-left: 1rem;" x-text="flow[1]"></p>
@@ -182,10 +161,38 @@
             {
                 var c = ca[i].trim();
                 if (c.indexOf("username=")==0) {
-                    document.getElementById("author").value = c.substring(9, c.length)
+                    document.getElementById("author").value = decodeURIComponent(c.substring(9, c.length))
                     break
                 };
             }
+            let body = document.documentElement;
+            const store = Alpine.store('store');
+            let offset = store.flows.length;
+
+            let nomore = false;
+            let lock = false;
+            window.addEventListener('scroll', async () => {
+                if (!lock && !nomore && body.scrollTop + body.clientHeight >= body.scrollHeight-100) {
+                    lock = true;
+                    try {
+                        const res = await fetch('/api/getflows?offset=' + offset);
+                        if (!res.ok) {
+                            return;
+                        }
+                        let flows = await res.json();
+                        if (!Array.isArray(flows) || flows.length == 0) {
+                            nomore = true;
+                            return;
+                        }
+                        offset += flows.length;
+                        store.flows.push.apply(store.flows, flows);
+                    } catch (err) {
+                        console.error('load flows failed', err);
+                    } finally {
+                        lock = false;
+                    }
+                }
+            }, { passive: true });
         </script>
     </body>
 </html>
